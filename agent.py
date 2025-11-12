@@ -24,7 +24,8 @@ class Agent():
             embedding_function=get_embeddings_model()
         )
 
-    def generic_func(self,query):
+    def generic_func(self,x,query):
+        print(x)
         print(query)
         prompt=PromptTemplate.from_template(GENERIC_PROMPT_TPL)
         llm_chain=LLMChain(
@@ -35,7 +36,9 @@ class Agent():
         return llm_chain.run(query)
 
     #填充提示词并总结答案
-    def retrival_func(self,query):
+    def retrival_func(self,x,query):
+        print(x)
+        print(query)
         documents=self.vdb.similarity_search_with_relevance_scores(query,k=5)
         # print(documents)
         # exit()
@@ -54,6 +57,8 @@ class Agent():
 
     #命名实体识别
     def graph_func(self,x,query):#这里加上x只是为了tools中的lambda匿名函数能够用上，只起到占位的作用，其他的用不上
+        print(x)
+        print(query)
         response_schemas=[
             ResponseSchema(type='list', name='disease', description='疾病名称实体'),
             ResponseSchema(type='list', name='symptom', description='疾病症状实体'),
@@ -210,12 +215,12 @@ class Agent():
         tools=[
             Tool.from_function(
                 name='generic_func',
-                func=self.generic_func,
-                description='可以解答通用领域知识，例如打招呼，问你是谁等问题',
+                func=lambda x:self.generic_func(x,query),
+                description='只解决打招呼，问你是谁，你能做什么这三个问题，其他的都不要用generic_func回答！！！',
             ),
             Tool.from_function(
                 name='retrival_func',
-                func=self.retrival_func,
+                func=lambda x:self.retrival_func(x,query),
                 description='用于回答寻医问药网相关问题',
             ),
             Tool.from_function(
@@ -226,7 +231,7 @@ class Agent():
             Tool.from_function(
                 name='search_func',
                 func=self.search_func,
-                description='其他工具没有正确答案时，通过搜索引擎，回答通用类问题',
+                description='请不要轻易调用这个！！当且仅当其他工具没有正确答案时，通过搜索引擎，回答通用类问题',
             )
         ]
         prefix = """请用中文，尽你所能回答以下问题。您可以使用以下工具："""
@@ -253,6 +258,12 @@ class Agent():
 
 if __name__=='__main__':
     agent=Agent()
+    # print(agent.query('你好'))
+    print(agent.query('寻医问药网获得过哪些投资？'))
+    print(agent.query('告诉我鼻炎和感冒是并发症吗？'))
+    print(agent.query('鼻炎怎么治疗？'))
+    # exit()
+
     # print(agent.generic_func('你叫什么名字？'))
     # print(agent.retrival_func('介绍一下寻医问药网'))
     # print(agent.retrival_func('寻医问药网的客服电话是多少？'))
@@ -263,4 +274,3 @@ if __name__=='__main__':
     # print(agent.graph_func('感冒和鼻炎是并发症吗？'))
     # print(agent.search_func('万能青年旅店是什么乐队？发布了几张专辑？代表歌曲有哪些？'))
 
-    print(agent.query('你好'))
