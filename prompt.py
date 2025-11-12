@@ -21,7 +21,6 @@ RETRIVAL_PROMPT_TPL = '''
 NER_PROMPT_TPL = '''
 1、从以下用户输入的句子中，提取实体内容。
 2、注意：根据用户输入的事实抽取内容，不要推理，不要补充信息。
-
 {format_instructions}
 ______
 用户输入：{query}
