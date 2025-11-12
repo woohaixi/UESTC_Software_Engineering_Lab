@@ -76,10 +76,10 @@ class Agent():
         #命名实体识别结果，填充模板
         graph_templates=[]
         for key,template in GRAPH_TEMPLATE.items():
-            slot=template['slots'][0]
-            slot_values=ner_result[slot]
-            # print(slot,slot_values)
-            # exit()
+            slot=template['slots'][0]#slot是占位符的名称，比如这个例子里的disease
+            slot_values=ner_result[slot]#slot_values在这个例子里是感冒，鼻炎
+            print(slot,slot_values)
+            exit()
             for value in slot_values:
                 graph_templates.append({
                     'question':replace_token_in_string(template['question'],[[slot,value]]),
