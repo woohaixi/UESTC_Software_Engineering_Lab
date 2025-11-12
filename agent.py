@@ -46,9 +46,38 @@ class Agent():
         }
         return retrival_chain.run(inputs)
 
+    #命名实体识别
+    def graph_func(self,query):
+        response_schemas=[
+            ResponseSchema(type='list', name='disease', description='疾病名称实体'),
+            ResponseSchema(type='list', name='symptom', description='疾病症状实体'),
+            ResponseSchema(type='list', name='drug', description='药品名称实体'),
+        ]
+        output_parser=StructuredOutputParser(response_schemas=response_schemas)
+        # format_instructions=structured_output_parser(response_schemas)  这个用不了！！！
+        format_instructions = output_parser.get_format_instructions()
+
+        ner_prompt=PromptTemplate(
+            template=NER_PROMPT_TPL,
+            partial_variables={'format_instructions':format_instructions},
+            input_variables=['query']
+        )
+        ner_chain=LLMChain(
+            llm=get_llm_model(),
+            prompt=ner_prompt,
+            verbose=os.getenv('VERBOSE')
+        )
+        result=ner_chain.run({
+                'query':query
+            })
+        ner_result=output_parser.parse(result)
+        print(ner_result)
+
 
 if __name__=='__main__':
     agent=Agent()
     # print(agent.generic_func('你叫什么名字？'))
-    print(agent.retrival_func('介绍一下寻医问药网'))
-    print(agent.retrival_func('寻医问药网的客服电话是多少？'))
+    # print(agent.retrival_func('介绍一下寻医问药网'))
+    # print(agent.retrival_func('寻医问药网的客服电话是多少？'))
+    print(agent.graph_func('感冒一般是什么引起的？'))
+    print(agent.graph_func('感冒吃什么药好得快？可以吃阿莫西林吗？'))
