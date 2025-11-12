@@ -1,3 +1,5 @@
+from sqlalchemy.testing.suite.test_reflection import metadata
+
 from utils import *
 from config import *
 from prompt import *
@@ -78,17 +80,28 @@ class Agent():
         for key,template in GRAPH_TEMPLATE.items():
             slot=template['slots'][0]#slot是占位符的名称，比如这个例子里的disease
             slot_values=ner_result[slot]#slot_values在这个例子里是感冒，鼻炎
-            print(slot,slot_values)
-            exit()
+            # print(slot,slot_values)
+            # exit()
             for value in slot_values:
                 graph_templates.append({
                     'question':replace_token_in_string(template['question'],[[slot,value]]),
                     'cypher':replace_token_in_string(template['cypher'],[[slot,value]]),
                     'answer':replace_token_in_string(template['answer'],[[slot,value]]),
                 })
-        print(graph_templates)
+        # print(graph_templates)
         if not graph_templates:
             return
+
+        #计算问题相似度，筛选最相关问题
+        graph_documents=[
+            Document(page_content=template['question'],metadata=template)
+            for template in graph_templates
+        ]
+        # print(graph_documents)
+        # exit()
+        db=FAISS.from_documents(graph_documents,get_embeddings_model())
+        graph_documents_filter=db.similarity_search_with_relevance_scores(query,k=3)
+        print(graph_documents_filter)
 
 if __name__=='__main__':
     agent=Agent()
