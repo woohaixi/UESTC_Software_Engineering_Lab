@@ -162,7 +162,7 @@ class Agent():
 
             data = response.json()
 
-            # 提取前3条结果，格式化成你想要的结构
+            # 提取前10条结果，格式化成你想要的结构
             search_results = ""
             organic = data.get('organic', [])
             if not organic:
@@ -190,6 +190,30 @@ class Agent():
         except Exception as e:
             return f"搜索出错: {str(e)}"
 
+    def query(self,query):
+        tools=[
+            Tool.from_function(
+                name='generic_func',
+                func=self.generic_func,
+                description='可以解答通用领域知识，例如打招呼，问你是谁等问题',
+            ),
+            Tool.from_function(
+                name='retrival_func',
+                func=self.retrival_func,
+                description='用于回答寻医问药网相关问题',
+            ),
+            Tool.from_function(
+                name='graph_func',
+                func=self.graph_func,
+                description='用于回答疾病、症状、药物等医疗相关问题',
+            ),
+            Tool.from_function(
+                name='search_func',
+                func=self.search_func,
+                description='其他工具没有正确答案时，通过搜索引擎，回答通用类问题',
+            )
+        ]
+
 if __name__=='__main__':
     agent=Agent()
     # print(agent.generic_func('你叫什么名字？'))
@@ -200,4 +224,4 @@ if __name__=='__main__':
     # print(agent.graph_func('感冒吃什么药好得快？可以吃阿莫西林吗？'))
 
     # print(agent.graph_func('感冒和鼻炎是并发症吗？'))
-    print(agent.search_func('万能青年旅店是什么乐队？发不了几张专辑？代表歌曲有哪些？'))
+    print(agent.search_func('万能青年旅店是什么乐队？发布了几张专辑？代表歌曲有哪些？'))
