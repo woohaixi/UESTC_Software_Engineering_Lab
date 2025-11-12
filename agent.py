@@ -100,11 +100,12 @@ class Agent():
         db=FAISS.from_documents(graph_documents,get_embeddings_model())
         graph_documents_filter=db.similarity_search_with_relevance_scores(query,k=3)
         # print(graph_documents_filter)
+        # exit()
 
         #执行CQL，得到结果
         query_result=[]
         neo4j_conn=get_neo4j_conn()
-        for document in graph_documents_filter:
+        for document in graph_documents_filter:#document[0]是内容，document[1]是分数
             question=document[0].page_content
             cypher=document[0].metadata['cypher']
             answer=document[0].metadata['answer']

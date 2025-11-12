@@ -37,3 +37,12 @@ GRAPH_PROMPT_TPL = '''
 ---
 **用户问题：{query}**
 '''
+
+# 搜索提示词
+SEARCH_PROMPT_TPL = '''
+请根据以下检索结果，回答用户问题，不要发散和联想内容。
+---
+检索结果：{query_result}
+---
+用户问题：{query}
+'''
