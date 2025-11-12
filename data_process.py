@@ -11,7 +11,7 @@ def doc2vec():
         chunk_size=300,
         chunk_overlap=50
     )
-    dir_path= os.path.join(os.path.dirname(__file__), 'data','inputs').replace('\\', '/')
+    dir_path= os.path.join(os.path.dirname(__file__), './data/inputs').replace('\\', '/')
     documents=[]
     for file_path in glob(dir_path+'/*.*'):
         loader=None
@@ -23,7 +23,14 @@ def doc2vec():
             loader = TextLoader(file_path, encoding='utf-8')
         if loader:
             documents+=loader.load_and_split(text_splitter)
-    print(documents)
+    # print(documents)
+    if documents:
+        vdb=Chroma.from_documents(
+            documents=documents,
+            embedding=get_embeddings_model(),
+            persist_directory=os.path.join(os.path.dirname(__file__), './data/db/').replace('\\', '/')
+        )
+        vdb.persist()
 
 if __name__ == '__main__':
     doc2vec()
