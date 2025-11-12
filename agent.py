@@ -124,6 +124,18 @@ class Agent():
                 pass
         # print(query_result)
         # exit()
+
+        prompt=PromptTemplate.from_template(GRAPH_PROMPT_TPL)
+        graph_chain=LLMChain(
+            llm=get_llm_model(),
+            prompt=prompt,
+            verbose=os.getenv('VERBOSE')
+        )
+        inputs={
+            'query':query,
+            'query_result':"\n\n".join(query_result) if len(query_result) else '没有查到'
+        }
+        return graph_chain.run(inputs)
 if __name__=='__main__':
     agent=Agent()
     # print(agent.generic_func('你叫什么名字？'))
