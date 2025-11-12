@@ -101,8 +101,29 @@ class Agent():
         # exit()
         db=FAISS.from_documents(graph_documents,get_embeddings_model())
         graph_documents_filter=db.similarity_search_with_relevance_scores(query,k=3)
-        print(graph_documents_filter)
+        # print(graph_documents_filter)
 
+        #执行CQL，得到结果
+        query_result=[]
+        neo4j_conn=get_neo4j_conn()
+        for document in graph_documents_filter:
+            question=document[0].page_content
+            cypher=document[0].metadata['cypher']
+            answer=document[0].metadata['answer']
+            try:
+                result=neo4j_conn.run(cypher).data()
+                # print(question)
+                # print(result)
+                # exit()
+                if result and any(value for value in result[0].values()):
+                    # print(list(result[0].items()))
+                    # exit()
+                    answer_str=replace_token_in_string(answer,list(result[0].items()))
+                    query_result.append(f'问题：{question}\n答案：{answer_str}')
+            except:
+                pass
+        # print(query_result)
+        # exit()
 if __name__=='__main__':
     agent=Agent()
     # print(agent.generic_func('你叫什么名字？'))
