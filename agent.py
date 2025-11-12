@@ -71,13 +71,32 @@ class Agent():
                 'query':query
             })
         ner_result=output_parser.parse(result)
-        print(ner_result)
+        # print(ner_result)
 
+        #命名实体识别结果，填充模板
+        graph_templates=[]
+        for key,template in GRAPH_TEMPLATE.items():
+            slot=template['slots'][0]
+            slot_values=ner_result[slot]
+            # print(slot,slot_values)
+            # exit()
+            for value in slot_values:
+                graph_templates.append({
+                    'question':replace_token_in_string(template['question'],[[slot,value]]),
+                    'cypher':replace_token_in_string(template['cypher'],[[slot,value]]),
+                    'answer':replace_token_in_string(template['answer'],[[slot,value]]),
+                })
+        print(graph_templates)
+        if not graph_templates:
+            return
 
 if __name__=='__main__':
     agent=Agent()
     # print(agent.generic_func('你叫什么名字？'))
     # print(agent.retrival_func('介绍一下寻医问药网'))
     # print(agent.retrival_func('寻医问药网的客服电话是多少？'))
-    print(agent.graph_func('感冒一般是什么引起的？'))
-    print(agent.graph_func('感冒吃什么药好得快？可以吃阿莫西林吗？'))
+
+    # print(agent.graph_func('感冒一般是什么引起的？'))
+    # print(agent.graph_func('感冒吃什么药好得快？可以吃阿莫西林吗？'))
+
+    print(agent.graph_func('感冒和鼻炎是并发症吗？'))
