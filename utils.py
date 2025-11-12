@@ -45,6 +45,14 @@ def replace_token_in_string(string,slots):
         string=string.replace('%'+key+'%',value)
     return string
 
+#连接neo4j
+def get_neo4j_conn():
+    return Graph(
+        os.getenv('NEO4J_URI'),
+        auth=(os.getenv('NEO4J_USERNAME'),os.getenv('NEO4J_PASSWORD'))
+    )
+
+
 if __name__ == '__main__':
     llm_model=get_llm_model()
     print(llm_model.predict('感冒吃什么食物有助于恢复？'))
