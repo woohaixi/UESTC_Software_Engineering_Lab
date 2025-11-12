@@ -39,6 +39,12 @@ def structured_output_parser(response_schemas):
         text += schema.name + ' 字段，表示：' + schema.description + '，类型为：' + schema.type + '\n'
     return text
 
+#文本替换函数
+def replace_token_in_string(string,slots):
+    for key,value in slots:
+        string=string.replace('%'+key+'%',value)
+    return string
+
 if __name__ == '__main__':
     llm_model=get_llm_model()
     print(llm_model.predict('感冒吃什么食物有助于恢复？'))
