@@ -1,5 +1,3 @@
-from sqlalchemy.testing.suite.test_reflection import metadata
-
 from utils import *
 from config import *
 from prompt import *
