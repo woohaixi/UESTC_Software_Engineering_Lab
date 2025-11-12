@@ -204,7 +204,7 @@ class Agent():
             ),
             Tool.from_function(
                 name='graph_func',
-                func=self.graph_func,
+                func=lambda x:self.graph_func(x,query),
                 description='用于回答疾病、症状、药物等医疗相关问题',
             ),
             Tool.from_function(
