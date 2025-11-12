@@ -14,8 +14,8 @@ from langchain.output_parsers import ResponseSchema,StructuredOutputParser
 
 import requests
 
-os.environ['HTTP_PROXY'] = 'http://127.0.0.1:7890'#调用wikipedia/google等互联网网站搜索
-os.environ['HTTPS_PROXY'] = 'http://127.0.0.1:7890'
+# os.environ['HTTP_PROXY'] = 'http://127.0.0.1:7890'#调用wikipedia/google等互联网网站搜索
+# os.environ['HTTPS_PROXY'] = 'http://127.0.0.1:7890'
 
 class Agent():
     def __init__(self):
@@ -25,6 +25,7 @@ class Agent():
         )
 
     def generic_func(self,query):
+        print(query)
         prompt=PromptTemplate.from_template(GENERIC_PROMPT_TPL)
         llm_chain=LLMChain(
             llm=get_llm_model(),
@@ -52,7 +53,7 @@ class Agent():
         return retrival_chain.run(inputs)
 
     #命名实体识别
-    def graph_func(self,x,query):
+    def graph_func(self,x,query):#这里加上x只是为了tools中的lambda匿名函数能够用上，只起到占位的作用，其他的用不上
         response_schemas=[
             ResponseSchema(type='list', name='disease', description='疾病名称实体'),
             ResponseSchema(type='list', name='symptom', description='疾病症状实体'),
@@ -142,53 +143,68 @@ class Agent():
         return graph_chain.run(inputs)
 
     def search_func(self, query):
-        # 先验证 API Key
-        api_key = os.getenv('SERPER_API_KEY')
-        if not api_key or api_key == '您的实际Serper_API_KEY':
-            return "请设置有效的 SERPER_API_KEY 环境变量"
+        # === 1. 动态启用代理（仅在此函数）===
+        original_http = os.environ.get('HTTP_PROXY')
+        original_https = os.environ.get('HTTPS_PROXY')
 
-        url = "https://google.serper.dev/search"
-        payload = {"q": query, "gl": "cn", "hl": "zh-cn"}
-        headers = {
-            'X-API-KEY': api_key,
-            'Content-Type': 'application/json'
-        }
+        os.environ['HTTP_PROXY'] = 'http://127.0.0.1:7890'
+        os.environ['HTTPS_PROXY'] = 'http://127.0.0.1:7890'
+        print("代理已启用：127.0.0.1:7890")
 
         try:
-            # 直接调用 Serper API
-            response = requests.post(url, json=payload, headers=headers)
+            # === 2. 原有搜索逻辑 ===
+            api_key = os.getenv('SERPER_API_KEY')
+            if not api_key or api_key == '您的实际Serper_API_KEY':
+                return "请设置有效的 SERPER_API_KEY 环境变量"
+
+            print(f"使用的 Serper API Key: {api_key[:10]}...")
+
+            url = "https://google.serper.dev/search"
+            payload = {"q": query, "gl": "cn", "hl": "zh-cn"}
+            headers = {
+                'X-API-KEY': api_key,
+                'Content-Type': 'application/json'
+            }
+
+            response = requests.post(url, json=payload, headers=headers, timeout=10)
             if response.status_code != 200:
                 return f"搜索失败: {response.status_code}"
 
             data = response.json()
-
-            # 提取前10条结果，格式化成你想要的结构
-            search_results = ""
-            organic = data.get('organic', [])
+            organic = data.get('organic', [])[:3]
             if not organic:
-                search_results = "未找到相关搜索结果"
-            else:
-                for i, item in enumerate(organic[:10]):
-                    search_results += f"结果 {i + 1}:\n"
-                    search_results += f"标题: {item.get('title', 'N/A')}\n"
-                    search_results += f"摘要: {item.get('snippet', 'N/A')}\n"
-                    search_results += f"链接: {item.get('link', 'N/A')}\n"
-                    search_results += "---\n"
+                return "未找到相关搜索结果"
 
-            # 使用你 prompt.py 中已定义的 SEARCH_PROMPT_TPL
+            search_results = ""
+            for i, item in enumerate(organic):
+                search_results += f"结果 {i + 1}:\n"
+                search_results += f"标题: {item.get('title', 'N/A')}\n"
+                search_results += f"摘要: {item.get('snippet', 'N/A')}\n"
+                search_results += f"链接: {item.get('link', 'N/A')}\n"
+                search_results += "---\n"
+
             prompt = PromptTemplate.from_template(SEARCH_PROMPT_TPL)
             chain = LLMChain(llm=get_llm_model(), prompt=prompt, verbose=os.getenv('VERBOSE'))
-
-            # 传入变量（必须和你的模板变量名一致）
-            result = chain.run({
-                'query': query,
-                'query_result': search_results  # 确保你的模板里用的是 {query_result}
-            })
+            result = chain.run({'query': query, 'query_result': search_results})
 
             return result
 
         except Exception as e:
             return f"搜索出错: {str(e)}"
+
+        finally:
+            # === 3. 恢复原始代理设置（关键！）===
+            if original_http is not None:
+                os.environ['HTTP_PROXY'] = original_http
+            else:
+                os.environ.pop('HTTP_PROXY', None)
+
+            if original_https is not None:
+                os.environ['HTTPS_PROXY'] = original_https
+            else:
+                os.environ.pop('HTTPS_PROXY', None)
+
+            print("代理已恢复")
 
     def query(self,query):
         tools=[
@@ -213,6 +229,27 @@ class Agent():
                 description='其他工具没有正确答案时，通过搜索引擎，回答通用类问题',
             )
         ]
+        prefix = """请用中文，尽你所能回答以下问题。您可以使用以下工具："""
+        suffix = """Begin!  
+
+        History: {chat_history}  
+        Question: {input}  
+        Thought:{agent_scratchpad}"""
+
+        agent_prompt = ZeroShotAgent.create_prompt(
+            tools=tools,
+            prefix=prefix,
+            suffix=suffix,
+            input_variables=['input', 'agent_scratchpad', 'chat_history'])
+        llm_chain = LLMChain(llm=get_llm_model(), prompt=agent_prompt)
+        agent = ZeroShotAgent(llm_chain=llm_chain)
+        memory = ConversationBufferMemory(memory_key='chat_history')
+        agent_chain = AgentExecutor.from_agent_and_tools(
+            agent=agent,
+            tools=tools,
+            memory=memory,
+            verbose=os.getenv('VERBOSE'))
+        return agent_chain.run({'input': query})
 
 if __name__=='__main__':
     agent=Agent()
@@ -224,4 +261,6 @@ if __name__=='__main__':
     # print(agent.graph_func('感冒吃什么药好得快？可以吃阿莫西林吗？'))
 
     # print(agent.graph_func('感冒和鼻炎是并发症吗？'))
-    print(agent.search_func('万能青年旅店是什么乐队？发布了几张专辑？代表歌曲有哪些？'))
+    # print(agent.search_func('万能青年旅店是什么乐队？发布了几张专辑？代表歌曲有哪些？'))
+
+    print(agent.query('你好'))
