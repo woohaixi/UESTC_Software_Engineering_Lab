@@ -14,7 +14,10 @@ from langchain.output_parsers import ResponseSchema,StructuredOutputParser
 
 class Agent():
     def __init__(self):
-        pass
+        self.vdb=Chroma(
+            persist_directory=os.path.join(os.path.dirname(__file__),'./data/db'),
+            embedding_function=get_embeddings_model()
+        )
 
     def generic_func(self,query):
         prompt=PromptTemplate.from_template(GENERIC_PROMPT_TPL)
