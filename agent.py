@@ -12,6 +12,11 @@ from langchain.agents import ZeroShotAgent,AgentExecutor,Tool
 from langchain.memory import ConversationBufferMemory
 from langchain.output_parsers import ResponseSchema,StructuredOutputParser
 
+import requests
+
+os.environ['HTTP_PROXY'] = 'http://127.0.0.1:7890'#调用wikipedia/google等互联网网站搜索
+os.environ['HTTPS_PROXY'] = 'http://127.0.0.1:7890'
+
 class Agent():
     def __init__(self):
         self.vdb=Chroma(
@@ -135,6 +140,56 @@ class Agent():
             'query_result':"\n\n".join(query_result) if len(query_result) else '没有查到'
         }
         return graph_chain.run(inputs)
+
+    def search_func(self, query):
+        # 先验证 API Key
+        api_key = os.getenv('SERPER_API_KEY')
+        if not api_key or api_key == '您的实际Serper_API_KEY':
+            return "请设置有效的 SERPER_API_KEY 环境变量"
+
+        url = "https://google.serper.dev/search"
+        payload = {"q": query, "gl": "cn", "hl": "zh-cn"}
+        headers = {
+            'X-API-KEY': api_key,
+            'Content-Type': 'application/json'
+        }
+
+        try:
+            # 直接调用 Serper API
+            response = requests.post(url, json=payload, headers=headers)
+            if response.status_code != 200:
+                return f"搜索失败: {response.status_code}"
+
+            data = response.json()
+
+            # 提取前3条结果，格式化成你想要的结构
+            search_results = ""
+            organic = data.get('organic', [])
+            if not organic:
+                search_results = "未找到相关搜索结果"
+            else:
+                for i, item in enumerate(organic[:10]):
+                    search_results += f"结果 {i + 1}:\n"
+                    search_results += f"标题: {item.get('title', 'N/A')}\n"
+                    search_results += f"摘要: {item.get('snippet', 'N/A')}\n"
+                    search_results += f"链接: {item.get('link', 'N/A')}\n"
+                    search_results += "---\n"
+
+            # 使用你 prompt.py 中已定义的 SEARCH_PROMPT_TPL
+            prompt = PromptTemplate.from_template(SEARCH_PROMPT_TPL)
+            chain = LLMChain(llm=get_llm_model(), prompt=prompt, verbose=os.getenv('VERBOSE'))
+
+            # 传入变量（必须和你的模板变量名一致）
+            result = chain.run({
+                'query': query,
+                'query_result': search_results  # 确保你的模板里用的是 {query_result}
+            })
+
+            return result
+
+        except Exception as e:
+            return f"搜索出错: {str(e)}"
+
 if __name__=='__main__':
     agent=Agent()
     # print(agent.generic_func('你叫什么名字？'))
@@ -144,4 +199,5 @@ if __name__=='__main__':
     # print(agent.graph_func('感冒一般是什么引起的？'))
     # print(agent.graph_func('感冒吃什么药好得快？可以吃阿莫西林吗？'))
 
-    print(agent.graph_func('感冒和鼻炎是并发症吗？'))
+    # print(agent.graph_func('感冒和鼻炎是并发症吗？'))
+    print(agent.search_func('万能青年旅店是什么乐队？发不了几张专辑？代表歌曲有哪些？'))

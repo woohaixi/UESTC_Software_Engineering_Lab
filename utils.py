@@ -1,11 +1,13 @@
+from dotenv import load_dotenv
+load_dotenv()  #这两行最好放在最前面！！！
+
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.chat_models import ChatOpenAI
 from py2neo import Graph
 from config import *
 
 import os
-from dotenv import load_dotenv
-load_dotenv()
+
 
 def get_embeddings_model():
     model_map = {
