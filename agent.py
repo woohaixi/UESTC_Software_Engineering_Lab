@@ -52,7 +52,7 @@ class Agent():
         return retrival_chain.run(inputs)
 
     #命名实体识别
-    def graph_func(self,query):
+    def graph_func(self,x,query):
         response_schemas=[
             ResponseSchema(type='list', name='disease', description='疾病名称实体'),
             ResponseSchema(type='list', name='symptom', description='疾病症状实体'),
