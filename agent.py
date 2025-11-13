@@ -275,6 +275,8 @@ class Agent():
                 description='【最后选择】当且仅当其他工具都无法回答时，才使用此工具通过搜索引擎回答通用类问题。不要轻易调用！',
             )
         ]
+
+        #这个方案，响应速度会快很多，代价就是一次性的，没有思考和二次尝试纠错的过程，其实已经没有Agent核心思想了，并不是正面解决问题的主流方法，只供大家参考
         tool=self.parse_tools(tools, query)
         return tool.func(query)#加上这一句后，下面的都不需要了
         # print(tool.func(query))
