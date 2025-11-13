@@ -21,6 +21,7 @@ RETRIVAL_PROMPT_TPL = '''
 检索结果: {query_result}
 ---
 用户问题: {query}
+回答：
 '''
 
 #实体识别提示词
@@ -42,6 +43,7 @@ GRAPH_PROMPT_TPL = '''
 {query_result}
 ---
 **用户问题：{query}**
+回答：
 '''
 
 # 搜索提示词
@@ -51,6 +53,7 @@ SEARCH_PROMPT_TPL = '''
 检索结果：{query_result}
 ---
 用户问题：{query}
+回答：
 '''
 
 # 用户消息补全和总结提示词
@@ -117,7 +120,6 @@ New input: {input}
 {agent_scratchpad}
 '''
 
-# prompt.py
 PARSE_TOOLS_PROMPT_TPL = '''
 你有权限使用以下工具，请根据工具描述和用户数据，判断应该使用哪个工具，回复用户问题，直接输出工具名称即可。
 ---
