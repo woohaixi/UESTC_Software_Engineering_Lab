@@ -116,3 +116,17 @@ Previous conversation history:
 New input: {input}
 {agent_scratchpad}
 '''
+
+# prompt.py
+PARSE_TOOLS_PROMPT_TPL = '''
+你有权限使用以下工具，请根据工具描述和用户数据，判断应该使用哪个工具，回复用户问题，直接输出工具名称即可。
+---
+{tools_description}
+---
+用户问题: {query}
+---
+输出:
+
+# 其他提示词，可以添加回答的引导，以免生成多余内容。
+'''
+
