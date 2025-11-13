@@ -6,10 +6,8 @@
   <component name="ChangeListManager">
     <list default="true" id="f936a99b-cc65-4f54-8950-cf4bee3cebb9" name="更改" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/db/977b6835-2146-4674-af1f-e87bcdc3fffd/data_level0.bin" beforeDir="false" afterPath="$PROJECT_DIR$/data/db/977b6835-2146-4674-af1f-e87bcdc3fffd/data_level0.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/data/db/chroma.sqlite3" beforeDir="false" afterPath="$PROJECT_DIR$/data/db/chroma.sqlite3" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/prompt.py" beforeDir="false" afterPath="$PROJECT_DIR$/prompt.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service.py" beforeDir="false" afterPath="$PROJECT_DIR$/service.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -96,7 +94,7 @@
       <workItem from="1763001564878" duration="1948000" />
       <workItem from="1763003542510" duration="148000" />
       <workItem from="1763003704474" duration="741000" />
-      <workItem from="1763004716809" duration="487000" />
+      <workItem from="1763004716809" duration="1275000" />
     </task>
     <servers />
   </component>
@@ -110,7 +108,7 @@
     <SUITE FILE_PATH="coverage/Medical__QA_Bot_Based_on_Langchain_and_Knowledge_Graph$test_search_key.coverage" NAME="test_search_key 覆盖结果" MODIFIED="1762944701950" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/Medical__QA_Bot_Based_on_Langchain_and_Knowledge_Graph$1.coverage" NAME="1 覆盖结果" MODIFIED="1762093671418" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/Medical__QA_Bot_Based_on_Langchain_and_Knowledge_Graph$main.coverage" NAME="main 覆盖结果" MODIFIED="1762957948539" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/Medical__QA_Bot_Based_on_Langchain_and_Knowledge_Graph$service.coverage" NAME="service 覆盖结果" MODIFIED="1763004779468" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Medical__QA_Bot_Based_on_Langchain_and_Knowledge_Graph$service.coverage" NAME="service 覆盖结果" MODIFIED="1763005974136" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/Medical__QA_Bot_Based_on_Langchain_and_Knowledge_Graph$utils.coverage" NAME="utils 覆盖结果" MODIFIED="1762908623367" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>
