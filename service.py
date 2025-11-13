@@ -25,7 +25,7 @@ class Service():
             elif len(item) == 1:
                 # 只有一个元素，可能是只有问题或只有答案，作为问题处理
                 chat_history+=f'问题：{item[0]}\n'
-        return llm_chain.run(query=message,chat_history=chat_history)
+        return llm_chain.invoke({'query':message,'chat_history':chat_history})['text']
 
     def answer(self,message,history):
         if history:

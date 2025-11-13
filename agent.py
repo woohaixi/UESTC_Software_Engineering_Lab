@@ -5,17 +5,17 @@ from prompt import *
 import os
 from langchain.chains import LLMChain,LLMRequestsChain
 from langchain.prompts import PromptTemplate
-from langchain.vectorstores.chroma import Chroma
-from langchain.vectorstores.faiss import FAISS
+from langchain_community.vectorstores import Chroma
+from langchain_community.vectorstores import FAISS
 from langchain.schema import Document
-from langchain.agents import ZeroShotAgent,AgentExecutor,Tool
+# from langchain.agents import ZeroShotAgent  #ZeroShotAgent已经弃用
+from langchain.agents import AgentExecutor,Tool,create_react_agent
 from langchain.memory import ConversationBufferMemory
 from langchain.output_parsers import ResponseSchema,StructuredOutputParser
+from langchain import hub
 
 import requests
 
-# os.environ['HTTP_PROXY'] = 'http://127.0.0.1:7890'#调用wikipedia/google等互联网网站搜索
-# os.environ['HTTPS_PROXY'] = 'http://127.0.0.1:7890'
 
 class Agent():
     def __init__(self):
@@ -78,9 +78,9 @@ class Agent():
             prompt=ner_prompt,
             verbose=os.getenv('VERBOSE')
         )
-        result=ner_chain.run({
+        result=ner_chain.invoke({
                 'query':query
-            })
+            })['text']
         ner_result=output_parser.parse(result)
         # print(ner_result)
 
@@ -252,41 +252,59 @@ class Agent():
                 description='【最后选择】当且仅当其他工具都无法回答时，才使用此工具通过搜索引擎回答通用类问题。不要轻易调用！',
             )
         ]
-        prefix = """请用中文，尽你所能回答以下问题。您可以使用以下工具：
-                【重要规则】
-                1. 如果是打招呼、问身份、问能力的问题，必须使用generic_func
-                2. 如果是医疗相关问题（疾病、症状、药物、治疗等），必须使用graph_func
-                3. 如果是关于寻医问药网网站的问题，使用retrival_func
-                4. 只有当以上工具都无法回答时，才考虑使用search_func
-                5. 每个问题只调用一次最合适的工具，不要重复调用多个工具"""
-        suffix = """Begin!  
+        # prefix = """请用中文，尽你所能回答以下问题。您可以使用以下工具：
+        #         【重要规则】
+        #         1. 如果是打招呼、问身份、问能力的问题，必须使用generic_func
+        #         2. 如果是医疗相关问题（疾病、症状、药物、治疗等），必须使用graph_func
+        #         3. 如果是关于寻医问药网网站的问题，使用retrival_func
+        #         4. 只有当以上工具都无法回答时，才考虑使用search_func
+        #         5. 每个问题只调用一次最合适的工具，不要重复调用多个工具"""
+        # suffix = """Begin!
+        #
+        # History: {chat_history}
+        # Question: {input}
+        # Thought:{agent_scratchpad}"""
+        #
+        # agent_prompt = ZeroShotAgent.create_prompt(
+        #     tools=tools,
+        #     prefix=prefix,
+        #     suffix=suffix,
+        #     input_variables=['input', 'agent_scratchpad', 'chat_history'])
+        # llm_chain = LLMChain(llm=get_llm_model(), prompt=agent_prompt)
+        # agent = ZeroShotAgent(llm_chain=llm_chain)
+        # memory = ConversationBufferMemory(memory_key='chat_history')
+        # agent_chain = AgentExecutor.from_agent_and_tools(
+        #     agent=agent,
+        #     tools=tools,
+        #     memory=memory,
+        #     verbose=os.getenv('VERBOSE'),
+        #     handle_parsing_errors=True,
+        #     max_iterations=3,  # 限制最大迭代次数，避免重复调用
+        #     max_execution_time=30)  # 限制最大执行时间
+        # return agent_chain.run({'input': query})
 
-        History: {chat_history}  
-        Question: {input}  
-        Thought:{agent_scratchpad}"""
+        prompt = hub.pull('hwchase17/react-chat')#从langsmith社区得到的提示词，不用再从头写了
+        # print(prompt)
+        # exit()
+        prompt.template = '请用中文回答问题! Final Answer 必须尊重 Observation 的结果，不能改变语义。\\n\n' + prompt.template
 
-        agent_prompt = ZeroShotAgent.create_prompt(
-            tools=tools,
-            prefix=prefix,
-            suffix=suffix,
-            input_variables=['input', 'agent_scratchpad', 'chat_history'])
-        llm_chain = LLMChain(llm=get_llm_model(), prompt=agent_prompt)
-        agent = ZeroShotAgent(llm_chain=llm_chain)
+        agent = create_react_agent(llm=get_llm_model(), tools=tools, prompt=prompt)
         memory = ConversationBufferMemory(memory_key='chat_history')
-        agent_chain = AgentExecutor.from_agent_and_tools(
+
+        agent_executor = AgentExecutor.from_agent_and_tools(
             agent=agent,
             tools=tools,
             memory=memory,
-            verbose=os.getenv('VERBOSE'),
             handle_parsing_errors=True,
-            max_iterations=3,  # 限制最大迭代次数，避免重复调用
-            max_execution_time=30)  # 限制最大执行时间
-        return agent_chain.run({'input': query})
+            verbose=os.getenv('VERBOSE')
+        )
+
+        return agent_executor.invoke({"input": query})['output']
 
 if __name__=='__main__':
     agent=Agent()
     # print(agent.query('你好'))
-    # print(agent.query('寻医问药网获得过哪些投资？'))
+    print(agent.query('寻医问药网获得过哪些投资？'))
     # print(agent.query('告诉我鼻炎和感冒是并发症吗？'))
     # print(agent.query('鼻炎怎么治疗？'))
     # print(agent.query('烧橙子可以治疗感冒吗？'))
@@ -298,10 +316,11 @@ if __name__=='__main__':
     # print(agent.generic_func('','你叫什么名字？'))
     # print(agent.retrival_func('','介绍一下寻医问药网'))
     # print(agent.retrival_func('','寻医问药网的客服电话是多少？'))
+    # print(agent.retrival_func('', '寻医问药网获得过哪些投资？'))
 
     # print(agent.graph_func('','感冒一般是什么引起的？'))
     # print(agent.graph_func('','感冒吃什么药好得快？可以吃阿莫西林吗？'))
     #
-    print(agent.graph_func('','感冒和鼻炎是并发症吗？'))
+    # print(agent.graph_func('','感冒和鼻炎是并发症吗？'))
     # print(agent.search_func('万能青年旅店是什么乐队？发布了几张专辑？代表歌曲有哪些？'))
 
