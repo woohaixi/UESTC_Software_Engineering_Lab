@@ -30,7 +30,7 @@ class Service():
     def answer(self,message,history):
         if history:
             message=self.get_summary_message(message,history)
-        print(message)
+        # print(message)
         return self.agent.query(message)
 
 

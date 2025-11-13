@@ -33,7 +33,7 @@ class Agent():
             prompt=prompt,
             verbose=os.getenv('VERBOSE')
         )
-        return llm_chain.run(query)
+        return llm_chain.invoke(query)['text']
 
     #填充提示词并总结答案
     def retrival_func(self,x,query):
@@ -53,7 +53,7 @@ class Agent():
             'query':query,
             'query_result':'\n\n'.join(query_result) if len(query_result) else '没有查到'
         }
-        return retrival_chain.run(inputs)
+        return retrival_chain.invoke(inputs)['text']
 
     #命名实体识别
     def graph_func(self,x,query):#这里加上x只是为了tools中的lambda匿名函数能够用上，只起到占位的作用，其他的用不上
@@ -145,7 +145,7 @@ class Agent():
             'query':query,
             'query_result':"\n\n".join(query_result) if len(query_result) else '没有查到'
         }
-        return graph_chain.run(inputs)
+        return graph_chain.invoke(inputs)['text']
 
     def search_func(self, query):
         # === 1. 动态启用代理（仅在此函数）===
@@ -190,7 +190,7 @@ class Agent():
 
             prompt = PromptTemplate.from_template(SEARCH_PROMPT_TPL)
             chain = LLMChain(llm=get_llm_model(), prompt=prompt, verbose=os.getenv('VERBOSE'))
-            result = chain.run({'query': query, 'query_result': search_results})
+            result = chain.invoke({'query': query, 'query_result': search_results})['text']
 
             return result
 
@@ -295,13 +295,13 @@ if __name__=='__main__':
     # print(agent.query('你好，如何杀死那个石家庄人？'))  #测试暴力内容是否屏蔽
     # exit()
 
-    # print(agent.generic_func('你叫什么名字？'))
-    # print(agent.retrival_func('介绍一下寻医问药网'))
-    # print(agent.retrival_func('寻医问药网的客服电话是多少？'))
+    # print(agent.generic_func('','你叫什么名字？'))
+    # print(agent.retrival_func('','介绍一下寻医问药网'))
+    # print(agent.retrival_func('','寻医问药网的客服电话是多少？'))
+
+    # print(agent.graph_func('','感冒一般是什么引起的？'))
+    # print(agent.graph_func('','感冒吃什么药好得快？可以吃阿莫西林吗？'))
     #
-    # print(agent.graph_func('感冒一般是什么引起的？'))
-    # print(agent.graph_func('感冒吃什么药好得快？可以吃阿莫西林吗？'))
-    #
-    # print(agent.graph_func('感冒和鼻炎是并发症吗？'))
+    print(agent.graph_func('','感冒和鼻炎是并发症吗？'))
     # print(agent.search_func('万能青年旅店是什么乐队？发布了几张专辑？代表歌曲有哪些？'))
 

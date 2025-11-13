@@ -1,8 +1,8 @@
 from dotenv import load_dotenv
 load_dotenv()  #这两行最好放在最前面！！！
 
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.chat_models import ChatOpenAI
+from langchain_openai import OpenAIEmbeddings
+from langchain_openai import ChatOpenAI
 from py2neo import Graph
 from config import *
 
