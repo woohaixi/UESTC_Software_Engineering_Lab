@@ -225,6 +225,29 @@ class Agent():
             return True
         return False
 
+    def parse_tools(self, tools, query):
+        prompt = PromptTemplate.from_template(PARSE_TOOLS_PROMPT_TPL)
+        llm_chain = LLMChain(
+            llm=get_llm_model(),
+            prompt=prompt,
+            verbose=os.getenv('VERBOSE')
+        )
+
+        # 拼接工具描述参数
+        tools_description = ''
+        for tool in tools:
+            tools_description += tool.name + ':' + tool.description + '\n'
+        # print(tools_description)
+        # exit()
+        result = llm_chain.invoke({'tools_description': tools_description, 'query': query})
+        # print(result)
+        # exit()
+        # 解析工具函数
+        for tool in tools:
+            if tool.name == result['text']:
+                return tool
+        return tools[0]
+
     def query(self,query):
         # 对于打招呼类问题，直接使用generic_func，不经过Agent
         if self._is_greeting(query):
@@ -252,6 +275,10 @@ class Agent():
                 description='【最后选择】当且仅当其他工具都无法回答时，才使用此工具通过搜索引擎回答通用类问题。不要轻易调用！',
             )
         ]
+        tool=self.parse_tools(tools, query)
+        return tool.func(query)#加上这一句后，下面的都不需要了
+        # print(tool.func(query))
+        # exit()
         # prefix = """请用中文，尽你所能回答以下问题。您可以使用以下工具：
         #         【重要规则】
         #         1. 如果是打招呼、问身份、问能力的问题，必须使用generic_func
@@ -302,25 +329,7 @@ class Agent():
 
         return agent_executor.invoke({"input": query})['output']
 
-    def parse_tools(self, tools, query):
-        prompt = PromptTemplate.from_template(PARSE_TOOLS_PROMPT_TPL)
-        llm_chain = LLMChain(
-            llm=get_llm_model(),
-            prompt=prompt,
-            verbose=os.getenv('VERBOSE')
-        )
 
-        # 拼接工具描述参数
-        tools_description = ''
-        for tool in tools:
-            tools_description += tool.name + ':' + tool.description + '\n'
-        result = llm_chain.invoke({'tools_description': tools_description, 'query': query})
-
-        # 解析工具函数
-        for tool in tools:
-            if tool.name == result['text']:
-                return tool
-        return tools[0]
 
 if __name__=='__main__':
     agent=Agent()
