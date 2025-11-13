@@ -302,6 +302,26 @@ class Agent():
 
         return agent_executor.invoke({"input": query})['output']
 
+    def parse_tools(self, tools, query):
+        prompt = PromptTemplate.from_template(PARSE_TOOLS_PROMPT_TPL)
+        llm_chain = LLMChain(
+            llm=get_llm_model(),
+            prompt=prompt,
+            verbose=os.getenv('VERBOSE')
+        )
+
+        # 拼接工具描述参数
+        tools_description = ''
+        for tool in tools:
+            tools_description += tool.name + ':' + tool.description + '\n'
+        result = llm_chain.invoke({'tools_description': tools_description, 'query': query})
+
+        # 解析工具函数
+        for tool in tools:
+            if tool.name == result['text']:
+                return tool
+        return tools[0]
+
 if __name__=='__main__':
     agent=Agent()
     # print(agent.query('你好'))
