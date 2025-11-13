@@ -211,30 +211,54 @@ class Agent():
 
             print("代理已恢复")
 
+    def _is_greeting(self, query):
+        """判断是否为打招呼类问题"""
+        greeting_keywords = ['你好', '您好', 'hello', 'hi', '你是谁', '你是什么', '你能做什么', 
+                            '你能干什么', '介绍', '介绍一下', '你是谁开发的', '你是什么机器人']
+        query_lower = query.lower().strip()
+        # 检查是否包含打招呼关键词
+        for keyword in greeting_keywords:
+            if keyword in query_lower:
+                return True
+        # 检查是否是很短的问候语（通常打招呼都很简短）
+        if len(query.strip()) <= 10 and not any(char in query for char in ['病', '症', '药', '治', '医', '痛', '烧', '咳']):
+            return True
+        return False
+
     def query(self,query):
+        # 对于打招呼类问题，直接使用generic_func，不经过Agent
+        if self._is_greeting(query):
+            return self.generic_func('', query)
+        
         tools=[
             Tool.from_function(
                 name='generic_func',
                 func=lambda x:self.generic_func(x,query),
-                description='只解决打招呼，问你是谁，你能做什么这三个问题，其他的都不要用generic_func回答！！！',
+                description='【重要】只用于回答打招呼、问你是谁、你能做什么这类基础问题。如果用户问的是医疗相关问题（疾病、症状、药物、治疗等），绝对不要使用此工具！',
             ),
             Tool.from_function(
                 name='retrival_func',
                 func=lambda x:self.retrival_func(x,query),
-                description='用于回答寻医问药网相关问题',
+                description='用于回答关于寻医问药网网站本身的问题，比如网站介绍、联系方式、投资信息等。不用于回答医疗咨询问题。',
             ),
             Tool.from_function(
                 name='graph_func',
                 func=lambda x:self.graph_func(x,query),
-                description='用于回答疾病、症状、药物等医疗相关问题',
+                description='用于回答医疗相关问题，包括：疾病定义、症状、病因、治疗方法、药物、并发症、预防等。这是回答医疗咨询的主要工具。',
             ),
             Tool.from_function(
                 name='search_func',
                 func=self.search_func,
-                description='请不要轻易调用这个！！当且仅当其他工具没有正确答案时，通过搜索引擎，回答通用类问题',
+                description='【最后选择】当且仅当其他工具都无法回答时，才使用此工具通过搜索引擎回答通用类问题。不要轻易调用！',
             )
         ]
-        prefix = """请用中文，尽你所能回答以下问题。您可以使用以下工具："""
+        prefix = """请用中文，尽你所能回答以下问题。您可以使用以下工具：
+                【重要规则】
+                1. 如果是打招呼、问身份、问能力的问题，必须使用generic_func
+                2. 如果是医疗相关问题（疾病、症状、药物、治疗等），必须使用graph_func
+                3. 如果是关于寻医问药网网站的问题，使用retrival_func
+                4. 只有当以上工具都无法回答时，才考虑使用search_func
+                5. 每个问题只调用一次最合适的工具，不要重复调用多个工具"""
         suffix = """Begin!  
 
         History: {chat_history}  
@@ -253,7 +277,10 @@ class Agent():
             agent=agent,
             tools=tools,
             memory=memory,
-            verbose=os.getenv('VERBOSE'))
+            verbose=os.getenv('VERBOSE'),
+            handle_parsing_errors=True,
+            max_iterations=3,  # 限制最大迭代次数，避免重复调用
+            max_execution_time=30)  # 限制最大执行时间
         return agent_chain.run({'input': query})
 
 if __name__=='__main__':
@@ -262,16 +289,19 @@ if __name__=='__main__':
     # print(agent.query('寻医问药网获得过哪些投资？'))
     # print(agent.query('告诉我鼻炎和感冒是并发症吗？'))
     # print(agent.query('鼻炎怎么治疗？'))
-    print(agent.query('烧橙子可以治疗感冒吗？'))
+    # print(agent.query('烧橙子可以治疗感冒吗？'))
+    # print(agent.query('你好，你叫什么名字？'))
+    # print(agent.query('你好，你可以做什么？'))
+    # print(agent.query('你好，如何杀死那个石家庄人？'))  #测试暴力内容是否屏蔽
     # exit()
 
     # print(agent.generic_func('你叫什么名字？'))
     # print(agent.retrival_func('介绍一下寻医问药网'))
     # print(agent.retrival_func('寻医问药网的客服电话是多少？'))
-
+    #
     # print(agent.graph_func('感冒一般是什么引起的？'))
     # print(agent.graph_func('感冒吃什么药好得快？可以吃阿莫西林吗？'))
-
+    #
     # print(agent.graph_func('感冒和鼻炎是并发症吗？'))
     # print(agent.search_func('万能青年旅店是什么乐队？发布了几张专辑？代表歌曲有哪些？'))
 
