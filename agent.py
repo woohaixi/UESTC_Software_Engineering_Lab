@@ -283,7 +283,8 @@ class Agent():
         #     max_execution_time=30)  # 限制最大执行时间
         # return agent_chain.run({'input': query})
 
-        prompt = hub.pull('hwchase17/react-chat')#从langsmith社区得到的提示词，不用再从头写了
+        # prompt=PromptTemplate.from_template(REACT_CHAT_PROMPT_TPL)#网络不稳定的时候用这个本地的
+        prompt = hub.pull('hwchase17/react-chat')#从langsmith社区拉取得到的提示词，不用再从头写了
         # print(prompt)
         # exit()
         prompt.template = '请用中文回答问题! Final Answer 必须尊重 Observation 的结果，不能改变语义。\\n\n' + prompt.template
