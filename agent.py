@@ -336,8 +336,8 @@ class Agent():
 if __name__=='__main__':
     agent=Agent()
     # print(agent.query('你好'))
-    print(agent.query('寻医问药网获得过哪些投资？'))
-    # print(agent.query('告诉我鼻炎和感冒是并发症吗？'))
+    # print(agent.query('寻医问药网获得过哪些投资？'))
+    print(agent.query('告诉我鼻炎和感冒是并发症吗？'))
     # print(agent.query('鼻炎怎么治疗？'))
     # print(agent.query('烧橙子可以治疗感冒吗？'))
     # print(agent.query('你好，你叫什么名字？'))
