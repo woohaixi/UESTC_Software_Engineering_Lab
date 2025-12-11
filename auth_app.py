@@ -693,6 +693,8 @@ def review_qa_record(record_id, reviewer, action, comment=''):
                            INSERT INTO user_warnings (username, qa_record_id, warning_reason)
                            VALUES (?, ?, ?)
                            ''', (username, record_id, warning_reason))
+            
+            print(f"[审核] 已为用户 {username} 添加警告: {warning_reason}")
 
             # 检查警告次数，如果超过3次自动禁用账户
             cursor.execute('SELECT warning_count FROM users WHERE username = ?', (username,))
@@ -740,6 +742,11 @@ def get_user_warnings(username, only_unread=False):
 
         warnings = cursor.fetchall()
         conn.close()
+        
+        print(f"[查询警告] 用户: {username}, 只查未读: {only_unread}, 结果数: {len(warnings)}")
+        if warnings:
+            print(f"[查询警告] 数据: {warnings}")
+        
         return warnings
     except Exception as e:
         print(f"获取警告失败: {e}")
@@ -812,144 +819,220 @@ def get_reviewed_records():
         return []
 
 
-# ================ 公告栏相关函数（已修复） ================
+# ================ 消息通知相关函数 ================
 
-def generate_notice(username, mark_read=True, show_all=False):
+def show_notice_page(username):
     """
-    生成公告栏内容
-    Args:
-        username: 用户名
-        mark_read: 是否标记未读为已读
-        show_all: True=显示所有警告，False=只显示未读警告
+    显示消息通知页面
     """
     if not username:
-        return gr.update(visible=False)
-
-    # 根据show_all参数获取警告
-    warnings = get_user_warnings(username, only_unread=not show_all)
+        return (gr.update(visible=True), gr.update(visible=False), 
+                gr.update(visible=False), gr.update(visible=False),
+                "", "")
+    
+    # 获取所有警告（包括已读和未读）
+    all_warnings = get_user_warnings(username, only_unread=False)
+    unread_warnings = get_user_warnings(username, only_unread=True)
     warning_count = get_user_warning_count(username)
-
-    # 如果是自动刷新且没有未读警告，不显示公告栏
-    if not show_all and not warnings:
-        return gr.update(visible=False)
-
-    # 构建通知内容
-    gradient_color = "#667eea, #764ba2"  # 默认蓝色渐变
-    title_icon = "📢"
-
-    # 根据警告次数调整颜色
-    if warning_count >= 2:
-        gradient_color = "#f093fb, #f5576c"  # 红色渐变（高风险）
-        title_icon = "⚠️"
+    
+    # 调试信息
+    print(f"[消息中心] 用户: {username}, 总警告: {len(all_warnings)}, 未读: {len(unread_warnings)}, 警告计数: {warning_count}")
+    
+    # 创建未读警告ID集合，用于快速查找
+    unread_warning_ids = {w[0] for w in unread_warnings}  # w[0] 是 warning_id
+    
+    # 生成状态显示
+    status_color = "#27ae60"  # 绿色
+    status_icon = "✅"
+    status_text = "账户状态良好"
+    
+    if warning_count >= 3:
+        status_color = "#e74c3c"  # 红色
+        status_icon = "🚫"
+        status_text = "账户已被禁用"
+    elif warning_count >= 2:
+        status_color = "#e67e22"  # 橙色
+        status_icon = "⚠️"
+        status_text = "警告级别：高危"
     elif warning_count >= 1:
-        gradient_color = "#f6d365, #fda085"  # 橙色渐变（警告）
-        title_icon = "⚠️"
-
-    notice_html = f"""
-<div style='background: linear-gradient(135deg, {gradient_color}); 
-            padding: 15px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
-    <div style='display: flex; align-items: center; margin-bottom: 10px;'>
-        <span style='font-size: 24px; margin-right: 10px;'>{title_icon}</span>
-        <span style='color: white; font-size: 18px; font-weight: bold;'>系统公告</span>
-        <span style='margin-left: auto; background: rgba(255,255,255,0.3); padding: 5px 15px; border-radius: 20px; color: white; font-size: 14px;'>
-            警告 {warning_count}/3
-        </span>
+        status_color = "#f39c12"  # 黄色
+        status_icon = "⚠️"
+        status_text = "警告级别：注意"
+    
+    status_html = f"""
+<div style='background: linear-gradient(135deg, {status_color}, {status_color}dd); 
+            padding: 20px; border-radius: 10px; margin-bottom: 20px; color: white;'>
+    <div style='font-size: 48px; text-align: center; margin-bottom: 10px;'>{status_icon}</div>
+    <div style='font-size: 24px; font-weight: bold; text-align: center; margin-bottom: 10px;'>{status_text}</div>
+    <div style='text-align: center; font-size: 16px;'>
+        累计警告: <span style='font-size: 20px; font-weight: bold;'>{warning_count}</span> / 3 次
     </div>
+    <div style='text-align: center; font-size: 14px; margin-top: 10px; opacity: 0.9;'>
+        未读消息: {len(unread_warnings)} 条 | 总消息: {len(all_warnings)} 条
+    </div>
+</div>
 """
-
-    if warnings:
-        # 显示警告记录
-        display_count = 0
-        for warning in warnings:
+    
+    # 生成警告列表
+    if all_warnings:
+        warnings_html = ""
+        for i, warning in enumerate(all_warnings):
             warning_id, qa_id, reason, warning_time = warning
-            display_count += 1
-            if display_count > 5:  # 最多显示5条
-                notice_html += f"""
-    <div style='background: white; padding: 10px; margin: 8px 0; border-radius: 8px; text-align: center; color: #666;'>
-        ... 还有 {len(warnings) - 5} 条历史警告
+            # 使用 warning_id 判断是否未读
+            is_unread = warning_id in unread_warning_ids
+            
+            # HTML转义，防止特殊字符破坏HTML结构
+            import html
+            reason_escaped = html.escape(str(reason))
+            warning_time_escaped = html.escape(str(warning_time))
+            
+            border_color = "#e74c3c" if is_unread else "#bdc3c7"
+            bg_color = "#fff5f5" if is_unread else "#f8f9fa"
+            badge = "🔴 未读" if is_unread else "✓ 已读"
+            badge_color = "#e74c3c" if is_unread else "#95a5a6"
+            
+            warnings_html += f"""
+<div style='background: {bg_color}; padding: 15px; margin: 10px 0; border-radius: 8px; 
+            border-left: 4px solid {border_color}; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
+    <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;'>
+        <span style='background: {badge_color}; color: white; padding: 3px 10px; 
+                     border-radius: 12px; font-size: 12px; font-weight: bold;'>{badge}</span>
+        <span style='color: #7f8c8d; font-size: 12px;'>{warning_time_escaped}</span>
     </div>
+    <div style='color: #2c3e50; font-size: 15px; line-height: 1.6;'>
+        {reason_escaped}
+    </div>
+    <div style='color: #95a5a6; font-size: 12px; margin-top: 8px;'>
+        记录ID: {qa_id if qa_id else '系统消息'}
+    </div>
+</div>
 """
-                break
 
-            notice_html += f"""
-    <div style='background: white; padding: 12px; margin: 8px 0; border-radius: 8px; border-left: 4px solid #f5576c;'>
-        <div style='color: #d9534f; font-weight: bold; font-size: 15px; margin-bottom: 5px;'>
-            ⚠️ {reason}
-        </div>
-        <div style='color: #666; font-size: 12px;'>
-            {warning_time}
-        </div>
+    else:
+        warnings_html = """
+<div style='background: #e8f5e9; padding: 30px; border-radius: 10px; text-align: center;'>
+    <div style='font-size: 48px; margin-bottom: 15px;'>🎉</div>
+    <div style='color: #27ae60; font-size: 18px; font-weight: bold; margin-bottom: 10px;'>
+        太棒了！没有任何警告记录
     </div>
+    <div style='color: #7f8c8d; font-size: 14px;'>
+        继续保持良好的使用习惯
+    </div>
+</div>
+"""
+    
+
+    
+    return (gr.update(visible=False), gr.update(visible=False), 
+            gr.update(visible=False), gr.update(visible=True),
+            status_html, warnings_html)
+
+
+def mark_all_warnings_read(username):
+    """
+    标记所有警告为已读，并刷新显示
+    """
+    if not username:
+        return "", ""
+    
+    mark_warnings_as_read(username)
+    
+    # 重新获取数据并生成HTML
+    all_warnings = get_user_warnings(username, only_unread=False)
+    unread_warnings = get_user_warnings(username, only_unread=True)
+    warning_count = get_user_warning_count(username)
+    
+    print(f"[标记已读] 用户: {username}, 总警告: {len(all_warnings)}, 未读: {len(unread_warnings)}")
+    
+    # 创建未读警告ID集合
+    unread_warning_ids = {w[0] for w in unread_warnings}
+    
+    # 生成状态显示
+    status_color = "#27ae60"
+    status_icon = "✅"
+    status_text = "账户状态良好"
+    
+    if warning_count >= 3:
+        status_color = "#e74c3c"
+        status_icon = "🚫"
+        status_text = "账户已被禁用"
+    elif warning_count >= 2:
+        status_color = "#e67e22"
+        status_icon = "⚠️"
+        status_text = "警告级别：高危"
+    elif warning_count >= 1:
+        status_color = "#f39c12"
+        status_icon = "⚠️"
+        status_text = "警告级别：注意"
+    
+    status_html = f"""
+<div style='background: linear-gradient(135deg, {status_color}, {status_color}dd); 
+            padding: 20px; border-radius: 10px; margin-bottom: 20px; color: white;'>
+    <div style='font-size: 48px; text-align: center; margin-bottom: 10px;'>{status_icon}</div>
+    <div style='font-size: 24px; font-weight: bold; text-align: center; margin-bottom: 10px;'>{status_text}</div>
+    <div style='text-align: center; font-size: 16px;'>
+        累计警告: <span style='font-size: 20px; font-weight: bold;'>{warning_count}</span> / 3 次
+    </div>
+    <div style='text-align: center; font-size: 14px; margin-top: 10px; opacity: 0.9;'>
+        未读消息: {len(unread_warnings)} 条 | 总消息: {len(all_warnings)} 条
+    </div>
+</div>
+"""
+    
+    # 生成警告列表
+    if all_warnings:
+        warnings_html = ""
+        import html
+        for warning in all_warnings:
+            warning_id, qa_id, reason, warning_time = warning
+            is_unread = warning_id in unread_warning_ids
+            
+            reason_escaped = html.escape(str(reason))
+            warning_time_escaped = html.escape(str(warning_time))
+            
+            border_color = "#e74c3c" if is_unread else "#bdc3c7"
+            bg_color = "#fff5f5" if is_unread else "#f8f9fa"
+            badge = "🔴 未读" if is_unread else "✓ 已读"
+            badge_color = "#e74c3c" if is_unread else "#95a5a6"
+            
+            warnings_html += f"""
+<div style='background: {bg_color}; padding: 15px; margin: 10px 0; border-radius: 8px; 
+            border-left: 4px solid {border_color}; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
+    <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;'>
+        <span style='background: {badge_color}; color: white; padding: 3px 10px; 
+                     border-radius: 12px; font-size: 12px; font-weight: bold;'>{badge}</span>
+        <span style='color: #7f8c8d; font-size: 12px;'>{warning_time_escaped}</span>
+    </div>
+    <div style='color: #2c3e50; font-size: 15px; line-height: 1.6;'>
+        {reason_escaped}
+    </div>
+    <div style='color: #95a5a6; font-size: 12px; margin-top: 8px;'>
+        记录ID: {qa_id if qa_id else '系统消息'}
+    </div>
+</div>
 """
     else:
-        # 没有警告记录
-        notice_html += """
-    <div style='background: white; padding: 15px; margin: 8px 0; border-radius: 8px; text-align: center;'>
-        <div style='color: #27ae60; font-size: 16px; font-weight: bold;'>
-            ✅ 您的账户状态良好
-        </div>
-        <div style='color: #7f8c8d; font-size: 14px; margin-top: 5px;'>
-            没有未处理的警告信息
-        </div>
+        warnings_html = """
+<div style='background: #e8f5e9; padding: 30px; border-radius: 10px; text-align: center;'>
+    <div style='font-size: 48px; margin-bottom: 15px;'>🎉</div>
+    <div style='color: #27ae60; font-size: 18px; font-weight: bold; margin-bottom: 10px;'>
+        太棒了！没有任何警告记录
     </div>
-"""
-
-    # 警告次数提醒
-    if warning_count >= 3:
-        notice_html += f"""
-    <div style='background: rgba(255,255,255,0.95); padding: 10px; margin-top: 10px; border-radius: 8px; border: 2px solid #d9534f;'>
-        <div style='color: #721c24; font-weight: bold; text-align: center; font-size: 14px;'>
-            ⚠️ 账户已被禁用！请联系管理员处理
-        </div>
+    <div style='color: #7f8c8d; font-size: 14px;'>
+        继续保持良好的使用习惯
     </div>
+</div>
 """
-    elif warning_count >= 2:
-        notice_html += f"""
-    <div style='background: rgba(255,255,255,0.95); padding: 10px; margin-top: 10px; border-radius: 8px; border: 2px solid #f0ad4e;'>
-        <div style='color: #8a6d3b; font-weight: bold; text-align: center; font-size: 14px;'>
-            ⚠️ 累计警告 {warning_count} 次，再次违规将导致账户被禁用！
-        </div>
-    </div>
-"""
-    elif warning_count >= 1:
-        notice_html += f"""
-    <div style='background: rgba(255,255,255,0.95); padding: 10px; margin-top: 10px; border-radius: 8px; border: 1px solid #f0ad4e;'>
-        <div style='color: #8a6d3b; text-align: center; font-size: 13px;'>
-            ⚠️ 累计警告 {warning_count} 次，请注意遵守使用规范
-        </div>
-    </div>
-"""
-
-    notice_html += "</div>"
-
-    # 标记未读警告为已读
-    if mark_read:
-        mark_warnings_as_read(username)
-
-    return gr.update(value=notice_html, visible=True)
+    
+    return status_html, warnings_html
 
 
-# 手动刷新公告栏
-def refresh_notice(username):
+def back_to_chat_from_notice():
     """
-    手动刷新公告栏（点击🔔按钮时调用）
-    显示所有警告记录（包括已读的）
+    从消息通知页面返回聊天
     """
-    return generate_notice(username, mark_read=True, show_all=True)
-
-
-# 自动刷新公告栏
-def auto_refresh_notice(trigger, username):
-    """
-    自动刷新公告栏（定时器调用）
-    只显示未读警告
-    """
-    if not username:
-        return gr.update(visible=False), str(int(trigger) + 1)
-
-    # 自动刷新时：只显示未读警告
-    notice = generate_notice(username, mark_read=False, show_all=False)
-    return notice, str(int(trigger) + 1)
+    return (gr.update(visible=True), gr.update(visible=False), 
+            gr.update(visible=False), gr.update(visible=False))
 
 
 # ================ 主应用 ================
@@ -1018,14 +1101,8 @@ if __name__ == '__main__':
                 user_role_display = gr.Textbox(value="", visible=False)
                 admin_panel_btn = gr.Button("管理面板", size="sm", scale=0, visible=False)
                 reviewer_panel_btn = gr.Button("审核面板", size="sm", scale=0, visible=False)
-                refresh_notice_btn = gr.Button("🔔", size="sm", scale=0)
+                notice_btn = gr.Button("🔔 消息", size="sm", scale=0)
                 logout_btn = gr.Button("退出登录", size="sm", scale=0)
-
-            # 公告栏
-            notice_board = gr.Markdown(visible=False)
-
-            # 隐藏的定时器触发器
-            auto_refresh_trigger = gr.Textbox(visible=False, value="0")
 
             chatbot = gr.Chatbot(height=400, bubble_full_width=False)
             msg_input = gr.Textbox(
@@ -1144,6 +1221,20 @@ if __name__ == '__main__':
 
             back_to_chat_from_review_btn = gr.Button("返回聊天", size="lg")
 
+        # 消息通知界面
+        with gr.Column(visible=False) as notice_page:
+            gr.Markdown(
+                "<div style='text-align: center; font-size: 28px; font-weight: bold; margin: 30px 0; color: #2c3e50;'>🔔 消息通知中心</div>")
+
+            with gr.Row():
+                notice_status_display = gr.Markdown()
+                mark_all_read_btn = gr.Button("全部标记为已读", variant="secondary", size="sm")
+
+            gr.Markdown("### 📋 警告记录")
+            warnings_display = gr.Markdown()
+
+            back_to_chat_from_notice_btn = gr.Button("返回聊天", size="lg")
+
         # 临时存储待验证的用户名和角色
         pending_username = gr.State(None)
         pending_role = gr.State(None)
@@ -1167,21 +1258,16 @@ if __name__ == '__main__':
                 is_admin = (role == 'admin')
                 is_reviewer = (role == 'reviewer' or role == 'admin')
 
-                # 登录时显示未读警告
-                notice = generate_notice(user, mark_read=True, show_all=False)
-
                 return (msg, user,
                         gr.update(visible=False), gr.update(visible=False), gr.update(visible=True),
                         gr.update(visible=False), gr.update(visible=False),
-                        None, role, "", role, gr.update(visible=is_admin), gr.update(visible=is_reviewer),
-                        notice)
+                        None, role, "", role, gr.update(visible=is_admin), gr.update(visible=is_reviewer))
             else:
                 # 登录失败
                 return (msg, None,
                         gr.update(visible=True), gr.update(visible=False), gr.update(visible=False),
                         gr.update(visible=False), gr.update(visible=False),
-                        None, None, "", "", gr.update(visible=False), gr.update(visible=False),
-                        gr.update(visible=False))
+                        None, None, "", "", gr.update(visible=False), gr.update(visible=False))
 
 
         login_btn.click(
@@ -1189,7 +1275,7 @@ if __name__ == '__main__':
             inputs=[login_username, login_password],
             outputs=[login_msg, user_state, login_page, mfa_page, chat_page, admin_page, reviewer_page,
                      pending_username, pending_role, mfa_username_display, user_role_display,
-                     admin_panel_btn, reviewer_panel_btn, notice_board]
+                     admin_panel_btn, reviewer_panel_btn]
         )
 
 
@@ -1219,23 +1305,20 @@ if __name__ == '__main__':
                 is_admin = (role == 'admin')
                 is_reviewer = (role == 'reviewer' or role == 'admin')
 
-                # MFA验证后显示未读警告
-                notice = generate_notice(username, mark_read=True, show_all=False)
-
                 return f"验证成功！欢迎回来，{username}！", username, \
                     gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), \
                     gr.update(visible=False), gr.update(visible=False), \
-                    role, gr.update(visible=is_admin), gr.update(visible=is_reviewer), notice
+                    role, gr.update(visible=is_admin), gr.update(visible=is_reviewer)
             else:
                 return msg, None, gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), "", gr.update(
-                    visible=False), gr.update(visible=False), gr.update(visible=False)
+                    visible=False), gr.update(visible=False)
 
 
         verify_btn.click(
             fn=handle_mfa_verify,
             inputs=[pending_username, mfa_code_input, pending_role],
             outputs=[mfa_msg, user_state, login_page, mfa_page, chat_page, admin_page, reviewer_page,
-                     user_role_display, admin_panel_btn, reviewer_panel_btn, notice_board]
+                     user_role_display, admin_panel_btn, reviewer_panel_btn]
         )
 
 
@@ -1262,19 +1345,25 @@ if __name__ == '__main__':
             outputs=[reg_msg]
         )
 
-        # 手动刷新公告栏（点击🔔按钮）
-        refresh_notice_btn.click(
-            fn=refresh_notice,
+        # 点击🔔按钮跳转到消息通知页面
+        notice_btn.click(
+            fn=show_notice_page,
             inputs=[user_state],
-            outputs=[notice_board]
+            outputs=[chat_page, admin_page, reviewer_page, notice_page, 
+                     notice_status_display, warnings_display]
         )
 
-        # 定时自动刷新（每3秒检查一次未读警告）
-        auto_refresh_trigger.change(
-            fn=auto_refresh_notice,
-            inputs=[auto_refresh_trigger, user_state],
-            outputs=[notice_board, auto_refresh_trigger],
-            every=3  # 每3秒刷新一次
+        # 标记所有消息为已读
+        mark_all_read_btn.click(
+            fn=mark_all_warnings_read,
+            inputs=[user_state],
+            outputs=[notice_status_display, warnings_display]
+        )
+
+        # 从消息通知页面返回聊天
+        back_to_chat_from_notice_btn.click(
+            fn=back_to_chat_from_notice,
+            outputs=[chat_page, admin_page, reviewer_page, notice_page]
         )
 
 
@@ -1425,7 +1514,7 @@ if __name__ == '__main__':
 
         logout_btn.click(
             fn=handle_logout,
-            outputs=[user_state, login_page, mfa_page, chat_page, admin_page, reviewer_page, notice_board, chatbot]
+            outputs=[user_state, login_page, mfa_page, chat_page, admin_page, reviewer_page, chatbot]
         )
 
 
