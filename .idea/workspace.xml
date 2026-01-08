@@ -6,10 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="f936a99b-cc65-4f54-8950-cf4bee3cebb9" name="更改" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/db/977b6835-2146-4674-af1f-e87bcdc3fffd/data_level0.bin" beforeDir="false" afterPath="$PROJECT_DIR$/data/db/977b6835-2146-4674-af1f-e87bcdc3fffd/data_level0.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/db/977b6835-2146-4674-af1f-e87bcdc3fffd/length.bin" beforeDir="false" afterPath="$PROJECT_DIR$/data/db/977b6835-2146-4674-af1f-e87bcdc3fffd/length.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/db/chroma.sqlite3" beforeDir="false" afterPath="$PROJECT_DIR$/data/db/chroma.sqlite3" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users.db" beforeDir="false" afterPath="$PROJECT_DIR$/users.db" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -183,6 +179,7 @@
       <workItem from="1765689862731" duration="19000" />
       <workItem from="1765866334377" duration="77000" />
       <workItem from="1765867967482" duration="175000" />
+      <workItem from="1767876250005" duration="111000" />
     </task>
     <servers />
   </component>
