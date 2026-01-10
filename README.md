@@ -3,7 +3,7 @@
 实验所需环境可以通过requirements.txt进行一键安装:  
 pip install -r requirements.txt
 实验需要创建一个.env文件，把下面的复制粘贴到.env中即可，APIKeys填你所购买的秘钥：    
-OPENAI_API_BASE=YOUR_OPENAI_API_BASE  
+OPENAI_API_BASE=YOUR_OPENAI_API_BASE    
 OPENAI_API_KEY=YOUR_OPENAI_API_KEY  
 SERPER_API_KEY=YOUR_SERPER_API_KEY  
 
